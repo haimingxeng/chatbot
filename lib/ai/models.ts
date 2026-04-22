@@ -61,7 +61,7 @@ export async function getCapabilities(): Promise<Record<string, ModelCapabilitie
       m.id,
       {
         tools: true,
-        vision: m.id.includes("gpt-4") || m.id.includes("4o"),
+        vision: m.id.includes("gpt-4") || m.id.includes("4o") || m.id.startsWith("gpt-5"),
         reasoning: m.id.startsWith("o"),
       },
     ])
