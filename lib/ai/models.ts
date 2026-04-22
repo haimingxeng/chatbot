@@ -1,8 +1,8 @@
-export const DEFAULT_CHAT_MODEL = "gpt-4o";
+export const DEFAULT_CHAT_MODEL = "gpt-5.4";
 
 export const titleModel = {
-  id: "gpt-4o-mini",
-  name: "GPT-4o Mini",
+  id: "gpt-5.4-mini",
+  name: "GPT-5.4 Mini",
   provider: "openai",
   description: "Fast model for title generation",
 };
@@ -25,36 +25,28 @@ export type ChatModel = {
 // Fallback list used when the upstream /v1/models call fails
 export const chatModels: ChatModel[] = [
   {
-    id: "gpt-4o",
-    name: "GPT-4o",
+    id: "gpt-5.4",
+    name: "GPT-5.4",
     provider: "openai",
-    description: "Flagship multimodal model with vision and tool use",
+    description: "Latest flagship model",
   },
   {
-    id: "gpt-4o-mini",
-    name: "GPT-4o Mini",
+    id: "gpt-5.4-mini",
+    name: "GPT-5.4 Mini",
     provider: "openai",
     description: "Fast and cost-efficient model",
   },
   {
-    id: "gpt-4.1",
-    name: "GPT-4.1",
+    id: "gpt-5.3-codex",
+    name: "GPT-5.3 Codex",
     provider: "openai",
-    description: "Latest GPT-4 generation with improved instruction following",
+    description: "Advanced coding model",
   },
   {
-    id: "o3",
-    name: "o3",
+    id: "gpt-5.3-codex-spark",
+    name: "GPT-5.3 Codex Spark",
     provider: "openai",
-    description: "Advanced reasoning model",
-    reasoningEffort: "medium",
-  },
-  {
-    id: "o4-mini",
-    name: "o4-mini",
-    provider: "openai",
-    description: "Fast reasoning model",
-    reasoningEffort: "low",
+    description: "Fast coding model",
   },
 ];
 
