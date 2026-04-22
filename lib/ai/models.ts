@@ -103,6 +103,12 @@ export function getActiveModels(): ChatModel[] {
 
 export const allowedModelIds = new Set(chatModels.map((m) => m.id));
 
+export async function isModelAllowed(modelId: string): Promise<boolean> {
+  if (allowedModelIds.has(modelId)) return true;
+  const upstream = await getUpstreamModels();
+  return upstream.some((m) => m.id === modelId);
+}
+
 export const modelsByProvider = chatModels.reduce(
   (acc, model) => {
     if (!acc[model.provider]) {

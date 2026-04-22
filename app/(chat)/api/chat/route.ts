@@ -13,10 +13,10 @@ import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import {
-  allowedModelIds,
   chatModels,
   DEFAULT_CHAT_MODEL,
   getCapabilities,
+  isModelAllowed,
 } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
       return new ChatbotError("unauthorized:chat").toResponse();
     }
 
-    const chatModel = allowedModelIds.has(selectedChatModel)
+    const chatModel = (await isModelAllowed(selectedChatModel))
       ? selectedChatModel
       : DEFAULT_CHAT_MODEL;
 
