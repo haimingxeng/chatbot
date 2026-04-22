@@ -4,7 +4,9 @@ type Entitlements = {
   maxMessagesPerHour: number;
 };
 
-const REGULAR_USER_MAX_MESSAGES_PER_HOUR = 100;
+const REGULAR_USER_MAX_MESSAGES_PER_HOUR = Number(
+  process.env.REGULAR_USER_MAX_MESSAGES_PER_HOUR ?? 100
+);
 
 export const entitlementsByUserType: Record<UserType, Entitlements> = {
   guest: {
