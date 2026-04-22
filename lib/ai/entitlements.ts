@@ -4,11 +4,13 @@ type Entitlements = {
   maxMessagesPerHour: number;
 };
 
+const REGULAR_USER_MAX_MESSAGES_PER_HOUR = 100;
+
 export const entitlementsByUserType: Record<UserType, Entitlements> = {
   guest: {
     maxMessagesPerHour: 10,
   },
   regular: {
-    maxMessagesPerHour: 10,
+    maxMessagesPerHour: REGULAR_USER_MAX_MESSAGES_PER_HOUR,
   },
 };
