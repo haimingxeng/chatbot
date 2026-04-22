@@ -4,14 +4,24 @@ import { z } from "zod";
 
 import { auth } from "@/app/(auth)/auth";
 
+const ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+];
+
 const FileSchema = z.object({
   file: z
     .instanceof(Blob)
-    .refine((file) => file.size <= 5 * 1024 * 1024, {
-      message: "File size should be less than 5MB",
+    .refine((file) => file.size <= 20 * 1024 * 1024, {
+      message: "File size should be less than 20MB",
     })
-    .refine((file) => ["image/jpeg", "image/png"].includes(file.type), {
-      message: "File type should be JPEG or PNG",
+    .refine((file) => ALLOWED_TYPES.includes(file.type), {
+      message: "Supported formats: JPEG, PNG, PDF, Word, Excel",
     }),
 });
 
