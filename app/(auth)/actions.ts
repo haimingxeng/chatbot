@@ -41,6 +41,15 @@ export const login = async (
   }
 };
 
+function getAllowedEmails(): string[] {
+  const envList = process.env.ALLOWED_EMAILS ?? "";
+  const fromEnv = envList
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return ["admin@tok.md", ...fromEnv];
+}
+
 export type RegisterActionState = {
   status:
     | "idle"
@@ -48,6 +57,7 @@ export type RegisterActionState = {
     | "success"
     | "failed"
     | "user_exists"
+    | "not_allowed"
     | "invalid_data";
 };
 
@@ -60,6 +70,11 @@ export const register = async (
       email: formData.get("email"),
       password: formData.get("password"),
     });
+
+    const allowedEmails = getAllowedEmails();
+    if (!allowedEmails.includes(validatedData.email.toLowerCase())) {
+      return { status: "not_allowed" };
+    }
 
     const [user] = await getUser(validatedData.email);
 
