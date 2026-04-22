@@ -1,11 +1,10 @@
-export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2.5";
+export const DEFAULT_CHAT_MODEL = "gpt-4o";
 
 export const titleModel = {
-  id: "mistral/mistral-small",
-  name: "Mistral Small",
-  provider: "mistral",
+  id: "gpt-4o-mini",
+  name: "GPT-4o Mini",
+  provider: "openai",
   description: "Fast model for title generation",
-  gatewayOrder: ["mistral"],
 };
 
 export type ModelCapabilities = {
@@ -23,145 +22,88 @@ export type ChatModel = {
   reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high";
 };
 
+// Fallback list used when the upstream /v1/models call fails
 export const chatModels: ChatModel[] = [
   {
-    id: "deepseek/deepseek-v3.2",
-    name: "DeepSeek V3.2",
-    provider: "deepseek",
-    description: "Fast and capable model with tool use",
-    gatewayOrder: ["bedrock", "deepinfra"],
-  },
-  {
-    id: "mistral/codestral",
-    name: "Codestral",
-    provider: "mistral",
-    description: "Code-focused model with tool use",
-    gatewayOrder: ["mistral"],
-  },
-  {
-    id: "mistral/mistral-small",
-    name: "Mistral Small",
-    provider: "mistral",
-    description: "Fast vision model with tool use",
-    gatewayOrder: ["mistral"],
-  },
-  {
-    id: "moonshotai/kimi-k2.5",
-    name: "Kimi K2.5",
-    provider: "moonshotai",
-    description: "Moonshot AI flagship model",
-    gatewayOrder: ["fireworks", "bedrock"],
-  },
-  {
-    id: "openai/gpt-oss-20b",
-    name: "GPT OSS 20B",
+    id: "gpt-4o",
+    name: "GPT-4o",
     provider: "openai",
-    description: "Compact reasoning model",
-    gatewayOrder: ["groq", "bedrock"],
-    reasoningEffort: "low",
+    description: "Flagship multimodal model with vision and tool use",
   },
   {
-    id: "openai/gpt-oss-120b",
-    name: "GPT OSS 120B",
+    id: "gpt-4o-mini",
+    name: "GPT-4o Mini",
     provider: "openai",
-    description: "Open-source 120B parameter model",
-    gatewayOrder: ["fireworks", "bedrock"],
-    reasoningEffort: "low",
+    description: "Fast and cost-efficient model",
   },
   {
-    id: "xai/grok-4.1-fast-non-reasoning",
-    name: "Grok 4.1 Fast",
-    provider: "xai",
-    description: "Fast non-reasoning model with tool use",
-    gatewayOrder: ["xai"],
+    id: "gpt-4.1",
+    name: "GPT-4.1",
+    provider: "openai",
+    description: "Latest GPT-4 generation with improved instruction following",
+  },
+  {
+    id: "o3",
+    name: "o3",
+    provider: "openai",
+    description: "Advanced reasoning model",
+    reasoningEffort: "medium",
+  },
+  {
+    id: "o4-mini",
+    name: "o4-mini",
+    provider: "openai",
+    description: "Fast reasoning model",
+    reasoningEffort: "low",
   },
 ];
 
-export async function getCapabilities(): Promise<
-  Record<string, ModelCapabilities>
-> {
-  const results = await Promise.all(
-    chatModels.map(async (model) => {
-      try {
-        const res = await fetch(
-          `https://ai-gateway.vercel.sh/v1/models/${model.id}/endpoints`,
-          { next: { revalidate: 86_400 } }
-        );
-        if (!res.ok) {
-          return [model.id, { tools: false, vision: false, reasoning: false }];
-        }
-
-        const json = await res.json();
-        const endpoints = json.data?.endpoints ?? [];
-        const params = new Set(
-          endpoints.flatMap(
-            (e: { supported_parameters?: string[] }) =>
-              e.supported_parameters ?? []
-          )
-        );
-        const inputModalities = new Set(
-          json.data?.architecture?.input_modalities ?? []
-        );
-
-        return [
-          model.id,
-          {
-            tools: params.has("tools"),
-            vision: inputModalities.has("image"),
-            reasoning: params.has("reasoning"),
-          },
-        ];
-      } catch {
-        return [model.id, { tools: false, vision: false, reasoning: false }];
-      }
-    })
-  );
-
-  return Object.fromEntries(results);
-}
-
-export const isDemo = process.env.IS_DEMO === "1";
-
-type GatewayModel = {
+type UpstreamModel = {
   id: string;
-  name: string;
-  type?: string;
-  tags?: string[];
+  object?: string;
 };
 
-export type GatewayModelWithCapabilities = ChatModel & {
-  capabilities: ModelCapabilities;
-};
-
-export async function getAllGatewayModels(): Promise<
-  GatewayModelWithCapabilities[]
-> {
+export async function getUpstreamModels(): Promise<ChatModel[]> {
   try {
-    const res = await fetch("https://ai-gateway.vercel.sh/v1/models", {
-      next: { revalidate: 86_400 },
-    });
-    if (!res.ok) {
-      return [];
-    }
+    const res = await fetch(
+      `${process.env.OPENAI_BASE_URL ?? "https://tok.md/v1"}/models`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY ?? ""}`,
+        },
+        next: { revalidate: 3600 },
+      }
+    );
+    if (!res.ok) return chatModels;
 
     const json = await res.json();
-    return (json.data ?? [])
-      .filter((m: GatewayModel) => m.type === "language")
-      .map((m: GatewayModel) => ({
-        id: m.id,
-        name: m.name,
-        provider: m.id.split("/")[0],
-        description: "",
-        capabilities: {
-          tools: m.tags?.includes("tool-use") ?? false,
-          vision: m.tags?.includes("vision") ?? false,
-          reasoning: m.tags?.includes("reasoning") ?? false,
-        },
-      }));
+    const models: ChatModel[] = (json.data ?? []).map((m: UpstreamModel) => ({
+      id: m.id,
+      name: m.id,
+      provider: "openai",
+      description: "",
+    }));
+    return models.length > 0 ? models : chatModels;
   } catch {
-    return [];
+    return chatModels;
   }
 }
+
+export async function getCapabilities(): Promise<Record<string, ModelCapabilities>> {
+  const models = await getUpstreamModels();
+  return Object.fromEntries(
+    models.map((m) => [
+      m.id,
+      {
+        tools: true,
+        vision: m.id.includes("gpt-4") || m.id.includes("4o"),
+        reasoning: m.id.startsWith("o"),
+      },
+    ])
+  );
+}
+
+export const isDemo = false;
 
 export function getActiveModels(): ChatModel[] {
   return chatModels;
