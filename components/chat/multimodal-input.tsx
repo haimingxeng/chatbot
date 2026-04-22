@@ -601,7 +601,7 @@ function PureAttachmentsButton({
 
   const caps: Record<string, ModelCapabilities> | undefined =
     modelsResponse?.capabilities ?? modelsResponse;
-  const hasVision = caps?.[selectedModelId]?.vision ?? false;
+  const hasVision = caps?.[selectedModelId]?.vision ?? true;
 
   return (
     <Button
