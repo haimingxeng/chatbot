@@ -1,11 +1,14 @@
 import { customProvider } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { isTestEnvironment } from "../constants";
 import { titleModel } from "./models";
 
-const tokmd = createOpenAI({
+const tokmd = createOpenAICompatible({
+  name: "tokmd",
   baseURL: process.env.OPENAI_BASE_URL ?? "https://tok.md/v1",
-  apiKey: process.env.OPENAI_API_KEY ?? "",
+  headers: {
+    Authorization: `Bearer ${process.env.OPENAI_API_KEY ?? ""}`,
+  },
 });
 
 export const myProvider = isTestEnvironment
