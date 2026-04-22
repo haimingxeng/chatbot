@@ -10,23 +10,5 @@ export const authConfig = {
     newUser: `${base}/`,
   },
   providers: [],
-  callbacks: {
-    authorized({ auth: session, request: { nextUrl } }) {
-      const isLoggedIn = !!session?.user;
-      const isAuthPage =
-        nextUrl.pathname === `${base}/login` ||
-        nextUrl.pathname === `${base}/register`;
-
-      if (isAuthPage) {
-        if (isLoggedIn) {
-          return Response.redirect(new URL(`${base}/`, nextUrl));
-        }
-        return true;
-      }
-
-      if (isLoggedIn) return true;
-
-      return false;
-    },
-  },
+  callbacks: {},
 } satisfies NextAuthConfig;
