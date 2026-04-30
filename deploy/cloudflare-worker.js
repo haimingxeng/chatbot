@@ -12,18 +12,15 @@ export default {
   async fetch(request) {
     const url = new URL(request.url);
 
-    // Only POST /api/chat goes to VPS — auth and everything else stays on Vercel
-    if (request.method === "POST" && url.pathname === "/api/chat") {
-      const target = new URL(request.url);
-      target.hostname = VPS_HOST;
-      return fetch(new Request(target.toString(), request));
-    }
+    const targetHost =
+      request.method === "POST" && url.pathname === "/api/chat"
+        ? VPS_HOST
+        : VERCEL_HOST;
 
-    // Everything else → Vercel
     const target = new URL(request.url);
-    target.hostname = VERCEL_HOST;
-    const headers = new Headers(request.headers);
-    headers.delete("x-forwarded-for");
-    return fetch(new Request(target.toString(), { ...request, headers }));
+    target.hostname = targetHost;
+
+    // Fully transparent proxy — do not modify any headers
+    return fetch(new Request(target.toString(), request));
   },
 };
