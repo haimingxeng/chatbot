@@ -1,4 +1,4 @@
-// Cloudflare Worker: route POST /api/chat to VPS, everything else to Vercel
+// Cloudflare Worker: route POST /api/chat to VPS, pass everything else through to Vercel
 //
 // Deploy steps:
 //   1. Cloudflare Dashboard → Workers & Pages → Create Worker
@@ -6,21 +6,20 @@
 //   3. Settings → Triggers → Add route: chat.tok.md/*
 
 const VPS_HOST = "chat-api.tok.md";
-const VERCEL_HOST = "chatbot-haimingxeng.vercel.app";
 
 export default {
   async fetch(request) {
     const url = new URL(request.url);
 
-    const targetHost =
-      request.method === "POST" && url.pathname === "/api/chat"
-        ? VPS_HOST
-        : VERCEL_HOST;
+    // Only POST /api/chat goes to VPS
+    if (request.method === "POST" && url.pathname === "/api/chat") {
+      const target = new URL(request.url);
+      target.hostname = VPS_HOST;
+      return fetch(new Request(target.toString(), request));
+    }
 
-    const target = new URL(request.url);
-    target.hostname = targetHost;
-
-    // Fully transparent proxy — do not modify any headers
-    return fetch(new Request(target.toString(), request));
+    // Everything else: pass through unchanged — preserves Host/Origin headers
+    // so Next.js Server Action CSRF check passes
+    return fetch(request);
   },
 };
