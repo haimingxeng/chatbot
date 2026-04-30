@@ -24,13 +24,58 @@ Cloudflare Worker  chat.tok.md
                             Pages · Auth · Server Actions · APIs
 ```
 
-### Why pass-through matters
+## How Routing Works
 
-The Worker must call `fetch(request)` for non-VPS traffic — not `fetch(new Request(...))`. Constructing a new request changes the `Host` header from `chat.tok.md` to `chatbot-haimingxeng.vercel.app`, which breaks Next.js Server Action CSRF validation.
+### DNS layer
 
-### Why sessions work across both deployments
+`chat.tok.md` is a Cloudflare Proxied record. Users resolve to Cloudflare edge IPs — Vercel's real IP is never exposed. All traffic enters Cloudflare first.
 
-NextAuth v5 signs session cookies with `AUTH_SECRET`. Both deployments share the same secret, so a session issued by Vercel is valid on VPS. `NEXTAUTH_URL` must **not** be set — NextAuth v5 infers the base URL from the request host via `trustHost: true`.
+### Worker layer
+
+The Worker intercepts every request matching `chat.tok.md/*` before it reaches any origin:
+
+```
+Request arrives at Cloudflare edge
+  │
+  ├── POST /api/chat?
+  │     YES → rewrite hostname to chat-api.tok.md → forward to VPS
+  │     NO  → fetch(request) unchanged → Cloudflare forwards to Vercel
+```
+
+The Worker runs on V8 at the edge, adding ~1ms overhead.
+
+### Why `fetch(request)` not `fetch(new Request(...))`
+
+Constructing a new request object changes `Host: chat.tok.md` → `Host: chatbot-haimingxeng.vercel.app`. Next.js Server Actions validate that `Origin` matches `Host` as a CSRF check — a mismatch returns 500. Passing the original request object preserves all headers unchanged.
+
+## How Sessions Work Across Two Deployments
+
+NextAuth v5 stores sessions as **stateless JWTs**, not server-side sessions:
+
+```
+Login (Vercel):
+  NextAuth signs JWT with AUTH_SECRET
+  Sets Cookie: __Secure-authjs.session-token=<JWT>  Domain: chat.tok.md
+
+Send message (Worker → VPS):
+  Browser sends Cookie for chat.tok.md automatically
+  VPS decrypts JWT with the same AUTH_SECRET → identity verified ✅
+```
+
+Both deployments share the same `AUTH_SECRET`, so either side can verify tokens issued by the other. No shared session store needed.
+
+> `NEXTAUTH_URL` must **not** be set on either side. NextAuth v5 infers the base URL from the incoming request host via `trustHost: true`. Setting it explicitly causes `signIn()` to make internal requests to that URL, which routes back through Cloudflare and breaks the auth flow.
+
+## Cookie Isolation Between Domains
+
+`chat.tok.md` and `chat-api.tok.md` are separate origins. Cookies are domain-scoped:
+
+| Action | Cookie domain | Accessible from |
+|--------|--------------|-----------------|
+| Login at `chat.tok.md` | `chat.tok.md` | `chat.tok.md` only |
+| Login at `chat-api.tok.md` | `chat-api.tok.md` | `chat-api.tok.md` only |
+
+Sessions are **not shared** between the two domains. This is by design — `chat-api.tok.md` is a backend target for the Worker, not a user-facing URL. Users always access `chat.tok.md`; their cookies are always `chat.tok.md`-scoped and forwarded transparently by the Worker to VPS.
 
 ## Infrastructure
 
@@ -56,8 +101,6 @@ Identical on both Vercel and VPS. See [`.env.production.example`](../.env.produc
 | `OPENAI_BASE_URL` | `https://tok.md/v1` |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob |
 | `REGULAR_USER_MAX_MESSAGES_PER_HOUR` | Default: `100` |
-
-> Do **not** set `NEXTAUTH_URL` on either side.
 
 ## Deployment
 
@@ -104,4 +147,4 @@ Standard git-push. No extra config beyond environment variables.
 |----------|--------|
 | VPS down | `/api/chat` unavailable; all other features unaffected |
 | Worker quota exceeded | Fail open → Vercel handles all traffic (60s limit applies) |
-| Vercel down | `/api/chat` works; pages and auth unavailable |
+| Vercel down | `/api/chat` works via VPS; pages and auth unavailable |
