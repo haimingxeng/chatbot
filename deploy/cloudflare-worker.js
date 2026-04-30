@@ -4,7 +4,6 @@
 //   1. Cloudflare Dashboard → Workers & Pages → Create Worker
 //   2. Paste this code
 //   3. Settings → Triggers → Add route: chat.tok.md/*
-//   4. Set variable VERCEL_HOST to your xxx.vercel.app domain
 
 const VPS_HOST = "chat-api.tok.md";
 const VERCEL_HOST = "chatbot-haimingxeng.vercel.app";
@@ -21,8 +20,12 @@ export default {
     }
 
     // Everything else → Vercel
+    // Strip x-forwarded-for to avoid NextAuth v5 header parsing bug
     const vercelUrl = new URL(request.url);
     vercelUrl.hostname = VERCEL_HOST;
-    return fetch(new Request(vercelUrl.toString(), request));
+    const headers = new Headers(request.headers);
+    headers.delete("x-forwarded-for");
+    headers.set("x-forwarded-host", url.hostname);
+    return fetch(new Request(vercelUrl.toString(), { ...request, headers }));
   },
 };
