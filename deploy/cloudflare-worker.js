@@ -12,21 +12,18 @@ export default {
   async fetch(request) {
     const url = new URL(request.url);
 
-    // Route POST /api/chat to VPS (no timeout constraints)
+    // Only POST /api/chat goes to VPS — auth and everything else stays on Vercel
     if (request.method === "POST" && url.pathname === "/api/chat") {
-      const vpsUrl = new URL(request.url);
-      vpsUrl.hostname = VPS_HOST;
-      return fetch(new Request(vpsUrl.toString(), request));
+      const target = new URL(request.url);
+      target.hostname = VPS_HOST;
+      return fetch(new Request(target.toString(), request));
     }
 
     // Everything else → Vercel
-    // Keep original host header so NextAuth CSRF check passes
-    const vercelUrl = new URL(request.url);
-    vercelUrl.hostname = VERCEL_HOST;
+    const target = new URL(request.url);
+    target.hostname = VERCEL_HOST;
     const headers = new Headers(request.headers);
-    headers.set("host", url.hostname);           // keep chat.tok.md as host
-    headers.delete("x-forwarded-for");           // prevent NextAuth parsing bug
-    headers.delete("x-forwarded-host");
-    return fetch(new Request(vercelUrl.toString(), { ...request, headers }));
+    headers.delete("x-forwarded-for");
+    return fetch(new Request(target.toString(), { ...request, headers }));
   },
 };
