@@ -20,12 +20,13 @@ export default {
     }
 
     // Everything else → Vercel
-    // Strip x-forwarded-for to avoid NextAuth v5 header parsing bug
+    // Keep original host header so NextAuth CSRF check passes
     const vercelUrl = new URL(request.url);
     vercelUrl.hostname = VERCEL_HOST;
     const headers = new Headers(request.headers);
-    headers.delete("x-forwarded-for");
-    headers.set("x-forwarded-host", url.hostname);
+    headers.set("host", url.hostname);           // keep chat.tok.md as host
+    headers.delete("x-forwarded-for");           // prevent NextAuth parsing bug
+    headers.delete("x-forwarded-host");
     return fetch(new Request(vercelUrl.toString(), { ...request, headers }));
   },
 };
